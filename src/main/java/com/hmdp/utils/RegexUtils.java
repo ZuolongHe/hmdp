@@ -3,7 +3,7 @@ package com.hmdp.utils;
 import cn.hutool.core.util.StrUtil;
 
 /**
- * @author 虎哥
+ * @author 正则校验
  */
 public class RegexUtils {
     /**
@@ -13,6 +13,7 @@ public class RegexUtils {
      */
     public static boolean isPhoneInvalid(String phone){
         return mismatch(phone, RegexPatterns.PHONE_REGEX);
+        // true 表示不匹配，false 表示匹配。
     }
     /**
      * 是否是无效邮箱格式

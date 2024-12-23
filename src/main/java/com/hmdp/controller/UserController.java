@@ -11,13 +11,14 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import java.net.HttpCookie;
 
 /**
  * <p>
  * 前端控制器
  * </p>
  *
- * @author 虎哥
+ * @author zlh
  * @since 2021-12-22
  */
 @Slf4j
@@ -34,10 +35,11 @@ public class UserController {
     /**
      * 发送手机验证码
      */
-    @PostMapping("code")
+    @PostMapping("/code")
     public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
-        // TODO 发送短信验证码并保存验证码
-        return Result.fail("功能未完成");
+        // 发送短信验证码并保存验证码
+        Result result = userService.sendCode(phone, session);
+        return result;
     }
 
     /**
@@ -46,8 +48,9 @@ public class UserController {
      */
     @PostMapping("/login")
     public Result login(@RequestBody LoginFormDTO loginForm, HttpSession session){
+        Result result = userService.login(loginForm, session);
         // TODO 实现登录功能
-        return Result.fail("功能未完成");
+        return result;
     }
 
     /**
@@ -60,9 +63,11 @@ public class UserController {
         return Result.fail("功能未完成");
     }
 
+    // 基于Session进行登录校验
     @GetMapping("/me")
-    public Result me(){
-        // TODO 获取当前登录的用户并返回
+    public Result me(HttpCookie cookie){
+        // 获取当前登录的用户并返回
+
         return Result.fail("功能未完成");
     }
 

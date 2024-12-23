@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hmdp.mapper.UserMapper">
+    <!--增加新用户-->
+    <insert id="addUser">
+        insert into tb_user(phone, password, nick_name, icon)
+        values (#{phone}, #{password}, #{nickName}, #{icon})
+    </insert>
+
+    <!--根据phone查询用户-->
+    <select id="selectByPhone" resultType="com.hmdp.entity.User">
+        select *
+        from tb_user
+        where phone = #{phone}
+    </select>
+</mapper>
+
