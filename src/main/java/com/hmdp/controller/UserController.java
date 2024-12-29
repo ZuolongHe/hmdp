@@ -3,9 +3,12 @@ package com.hmdp.controller;
 
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.UserDTO;
+import com.hmdp.entity.User;
 import com.hmdp.entity.UserInfo;
 import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
+import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -65,10 +68,11 @@ public class UserController {
 
     // 基于Session进行登录校验
     @GetMapping("/me")
-    public Result me(HttpCookie cookie){
+    public Result me(){
         // 获取当前登录的用户并返回
-
-        return Result.fail("功能未完成");
+        User user = UserHolder.getUser();
+        log.info("user:{}",user);
+        return Result.ok(user);
     }
 
     @GetMapping("/info/{id}")
@@ -83,5 +87,11 @@ public class UserController {
         info.setUpdateTime(null);
         // 返回
         return Result.ok(info);
+    }
+
+    @GetMapping("/info/undefined")
+    public Result info(){
+
+        return Result.ok();
     }
 }

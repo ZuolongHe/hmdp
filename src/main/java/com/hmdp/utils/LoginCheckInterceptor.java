@@ -1,5 +1,6 @@
 package com.hmdp.utils;
 
+import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,12 +26,14 @@ public class LoginCheckInterceptor implements HandlerInterceptor {
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
         log.info("user:{}", user);
-        // 判断用户是否存在
+        // TODO：ThreadLocal
         if (user == null){
+            response.setStatus(401);
             return false;
         }
-
-        return false;
+        // 存在，用户信息保存在ThreadLocal中
+        UserHolder.saveUser(user);
+        return true;
     }
 
     @Override
