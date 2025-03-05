@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static com.hmdp.utils.RedisConstants.*;
+
 /**
  * <p>
  * 服务实现类
@@ -45,23 +47,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private StringRedisTemplate stringRedisTemplate;
 
     private static ObjectMapper objectMapper = new ObjectMapper();
+
     /**
      * 发送短信验证码
+     *
      * @return Result
      */
     @Override
-    public Result sendCode(String phone, HttpSession session) {
-        // 1. 校验手机号, 符合, 生成验证码, 不符合，返回错误信息
-        if (RegexUtils.isPhoneInvalid(phone)){
+    public Result sendCode(String phone) {
+        // 1.校验手机号, 符合, 生成验证码, 不符合，返回错误信息
+        if (RegexUtils.isPhoneInvalid(phone)) {
             return Result.fail("号码输入错误！");
-        }else {
-            // 2. 生成6位数验证码
+        } else {
+            // 2.生成6位数验证码
             String numbers = RandomUtil.randomNumbers(6);
-            // 3. 保存到session
-            // session.setAttribute("code", numbers);
-            // 验证码保存到redis中
-            stringRedisTemplate.opsForValue().set(RedisConstants.LOGIN_CODE_KEY + phone, numbers);
-            // 4. 返回结果
+
+            // 3.验证码保存到redis中,设置2min有效期
+            stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, numbers, LOGIN_CODE_TTL, TimeUnit.MINUTES);
+
+            // 4.返回结果
             log.info("code：{}", numbers);
             return Result.ok(numbers);
         }
@@ -70,58 +74,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     /**
      * 登录功能实现
+     *
      * @param loginForm
-     * @param session
      * @return
      */
     @Override
-    public Result login(LoginFormDTO loginForm, HttpSession session) {
-        if (RegexUtils.isPhoneInvalid(loginForm.getPhone())){
+    public Result login(LoginFormDTO loginForm) {
+        if (RegexUtils.isPhoneInvalid(loginForm.getPhone())) {
             return Result.fail("号码输入错误！");
         }
-        // 1. 校验验证码
-        if (loginForm.getCode().equals(stringRedisTemplate.opsForValue().get(RedisConstants.LOGIN_CODE_KEY + loginForm.getPhone()))){
-            // 校验一致，根据手机号查询用户
-            User user = userMapper.selectByPhone(loginForm.getPhone());
-            // 检查用户是否存在
-            if (user != null){
-                // 若不为空，则保存到session,返回信息
-                // session.setAttribute("user", BeanUtil.copyProperties(user, UserDTO.class));
-                // 用户信息保存到redis中, 为该用户生成UUID作为key
-                String uuid = UUID.randomUUID().toString();
-                String token = RedisConstants.LOGIN_USER_KEY + uuid;
-                UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
-                Map<String, Object> map = BeanUtil.beanToMap(userDTO);
-                stringRedisTemplate.opsForHash().putAll(token, map);
-                // 设置token有效期
-                stringRedisTemplate.expire(token, RedisConstants.LOGIN_USER_TTL, TimeUnit.MINUTES);
-                return Result.ok(token);
-            }else {
-                // 若为空，创建于新用户，保存到session，返回信息
-                User newUser = cresteNewUser(loginForm.getPhone());
-                userMapper.addUser(newUser);
-                log.info("user:{}", newUser);
-                String uuid = UUID.randomUUID().toString();
-                String token = RedisConstants.LOGIN_USER_KEY + uuid;
-                UserDTO userDTO = BeanUtil.copyProperties(newUser, UserDTO.class);
-                // session.setAttribute("user", BeanUtil.copyProperties(newUser, UserDTO.class));
-                Map<String, Object> map = BeanUtil.beanToMap(userDTO);
-                stringRedisTemplate.opsForHash().putAll(token, map);
-                // 设置有效期
-                stringRedisTemplate.expire(token, RedisConstants.LOGIN_USER_TTL, TimeUnit.MINUTES);
-                return Result.ok(token);
-            }
-        }else {
-            // 校验不一致
-            return Result.fail("验证码输入错误！");
+        // 1.校验验证码
+        String cacheCode = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + loginForm.getPhone());
+        if (cacheCode == null || !cacheCode.equals(loginForm.getCode())) {
+            return Result.fail("验证码错误");
         }
+        // 2.查询用户信息
+        User user = userMapper.selectByPhone(loginForm.getPhone());
+        if (user == null){
+            // 注册新用户信息
+            user = cresteNewUser(loginForm.getPhone());
+        }
+        // 3.生成token存入到redis缓存
+        String token = UUID.randomUUID().toString();
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        Map<String, Object> map = BeanUtil.beanToMap(userDTO);
+        stringRedisTemplate.opsForHash().putAll(LOGIN_USER_KEY + token, map);
+        // 设置有效期30min
+        stringRedisTemplate.expire(LOGIN_USER_KEY + token, LOGIN_USER_TTL, TimeUnit.MINUTES);
+        return Result.ok(token);
     }
 
     // 创建新用户
-    private User cresteNewUser(String phone){
+    private User cresteNewUser(String phone) {
         User user = new User();
         user.setNickName(SystemConstants.USER_NICK_NAME_PREFIX + RandomUtil.randomString(6));
         user.setPhone(phone);
+        userMapper.addUser(user);
         return user;
     }
 

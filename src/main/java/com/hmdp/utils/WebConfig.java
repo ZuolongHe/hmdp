@@ -17,6 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private LoginCheckInterceptor loginCheckInterceptor;
 
+    @Autowired
+    private RefreshCheckInterceptor refreshCheckInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(loginCheckInterceptor).addPathPatterns("/**")
@@ -26,6 +29,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/blog/hot",
                         "/shop/**",
                         "/shop-type/**",
-                        "/voucher/**");
+                        "/voucher/**").order(1);
+
+        registry.addInterceptor(refreshCheckInterceptor).addPathPatterns("/**").order(0);
     }
 }

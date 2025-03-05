@@ -15,6 +15,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
 
 /**
  * @Title hmdp
@@ -29,28 +33,12 @@ public class LoginCheckInterceptor implements HandlerInterceptor {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
-    private static ObjectMapper objectMapper = new ObjectMapper();
-
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 根据sessionId获取对应的session
-        // HttpSession session = request.getSession();
-        // UserDTO user = (UserDTO) session.getAttribute("user");
-        // 获取token
-        String token = request.getHeader("authorization");
-        if (token == null){
+        // 根据存在ThreadLocal中的用户信息判断
+        if (UserHolder.getUser() == null) {
             return false;
         }
-        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(token);
-        UserDTO userDTO = BeanUtil.fillBeanWithMap(entries, new UserDTO(), false);
-        log.info("user:{}", userDTO);
-        // ThreadLocal
-        if (userDTO == null){
-            response.setStatus(401);
-            return false;
-        }
-        // 存在，用户信息保存在ThreadLocal中
-        UserHolder.saveUser(userDTO);
         return true;
     }
 
