@@ -1,6 +1,7 @@
 package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -13,14 +14,14 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
-import static com.hmdp.utils.RedisConstants.CACHE_SHOP_TTL;
+import static com.hmdp.utils.RedisConstants.*;
 
 /**
  * <p>
@@ -61,6 +62,76 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             return Result.ok(shop);
         }
 
+    }
+
+
+    /**
+     * 缓存穿透解决方案，商品信息查询
+     * @param id
+     * @return
+     */
+    public Result queryByIdCacheThrow(Long id) {
+        // 1.根据id从redis中查询商铺缓存
+        String entries = stringRedisTemplate.opsForValue().get(CACHE_SHOP_KEY + id);
+        // 2.缓存有数据，则从数据库中查询
+        if (StrUtil.isNotBlank(entries)){
+           return Result.ok(JSONUtil.toBean(entries, Shop.class));
+        }
+        // 3.缓存没有数据
+        if (entries != null) {
+            return null;
+        }
+        // 4.未命中，则查询数据库
+        Shop shop = getById(id);
+        if (shop != null){
+            stringRedisTemplate.opsForValue().set(CACHE_SHOP_KEY + id, JSONUtil.toJsonStr(shop), CACHE_SHOP_TTL, TimeUnit.MINUTES);
+            return Result.ok(shop);
+        }
+        stringRedisTemplate.opsForValue().set(CACHE_SHOP_KEY + id, "", CACHE_NULL_TTL, TimeUnit.MINUTES);
+        return null;
+    }
+
+
+    /**
+     * 缓存击穿解决方案，基于互斥锁
+     */
+
+
+
+    /**
+     * 获取互斥锁
+     */
+    private boolean tryLock(String key){
+        Boolean aBoolean = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
+        return BooleanUtil.isTrue(aBoolean);
+    }
+
+
+    /**
+     * 释放互斥锁
+     */
+    private void unLock(String key){
+        Boolean delete = stringRedisTemplate.delete(key);
+    }
+
+    /**
+     * 更新商户信息
+     * @return
+     */
+    @Transactional
+    @Override
+    public Result updateByIdCache(Shop shop) {
+        Long id = shop.getId();
+        if (id == null){
+            return Result.fail("id为空！");
+        }
+        // 1.先更新数据库
+        updateById(shop);
+
+        // 2.再删除缓存
+        stringRedisTemplate.delete(CACHE_SHOP_KEY + id);
+
+        return Result.ok();
     }
 }
 

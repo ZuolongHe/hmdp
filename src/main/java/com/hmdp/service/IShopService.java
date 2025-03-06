@@ -22,6 +22,5 @@ public interface IShopService extends IService<Shop> {
     Result queryById(Long id);
 
 
-
-
+    Result updateByIdCache(Shop shop);
 }
