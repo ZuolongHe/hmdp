@@ -36,6 +36,7 @@ public class HmdpTest {
     }
 
     @Test
+    // TODO：生成全局唯一ID结果未显示
     void testOnlyId(){
         Runnable task = () -> {
             for (int i = 1; i <= 100 ; i++) {

@@ -38,12 +38,6 @@ public class RedisIdWorker {
         return distanceTime << COUNT_BITS | increment;
     }
 
-    public static void main(String[] args) {
-        LocalDateTime of = LocalDateTime
-                .of(2020, 1, 1, 0, 0, 0);
-        long second = of.toEpochSecond(ZoneOffset.UTC);
-        System.out.println(second);
-    }
 
 
 
