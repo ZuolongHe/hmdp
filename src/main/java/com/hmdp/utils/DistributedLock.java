@@ -3,6 +3,7 @@ package com.hmdp.utils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -20,6 +21,8 @@ public class DistributedLock implements ILock{
 
     private static final String preName = "lock:";
 
+    private static final String index_name = UUID.randomUUID().toString() + "-";
+
     public DistributedLock(String name, StringRedisTemplate stringRedisTemplate) {
         this.name = name;
         this.stringRedisTemplate = stringRedisTemplate;
@@ -29,14 +32,20 @@ public class DistributedLock implements ILock{
     // 获取分布式锁
     @Override
     public boolean tryLock(long timeoutSec) {
-        String threadName = Thread.currentThread().getName();
-        Boolean lock = stringRedisTemplate.opsForValue().setIfAbsent(preName + this.name + ":", threadName, timeoutSec, TimeUnit.SECONDS);
+        long threadName = Thread.currentThread().getId();
+        Boolean lock = stringRedisTemplate.opsForValue().setIfAbsent(preName + name + ":", index_name + threadName, timeoutSec, TimeUnit.SECONDS);
         return Boolean.TRUE.equals(lock);
     }
 
     // 释放分布式锁
     @Override
     public void unlock() {
-        stringRedisTemplate.delete(preName + this.name + ":");
+        // 获取此时分布式锁
+        String s = stringRedisTemplate.opsForValue().get(preName + name + ":");
+        // 判断 是则释放锁
+        if (s.equals(index_name + Thread.currentThread().getId())){
+            stringRedisTemplate.delete(preName + name + ":");
+        }
+
     }
 }

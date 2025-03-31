@@ -63,7 +63,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         Long userId = UserHolder.getUser().getId();
         // 用户获取分布式锁
         DistributedLock distributedLock = new DistributedLock("VoucherOrder:" + userId, stringRedisTemplate);
-        boolean bool = distributedLock.tryLock(20);
+        boolean bool = distributedLock.tryLock(200);
         if (bool == false){
             return Result.fail("获取分布式锁失败");
         }
