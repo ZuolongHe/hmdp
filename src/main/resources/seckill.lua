@@ -20,7 +20,7 @@ if (tonumber(redis.call('get', stockKey)) <= 0) then
 end
 
 -- 判断用户是否已下单
-if (redis.call('sismemeber', stockUser, userId) == 1) then
+if (redis.call('SISMEMBER', stockUser, userId) == 1) then
     return 2
 end
 

@@ -69,7 +69,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
 
     /**
-     * 缓存穿透解决方案，商品信息查询
+     * 缓存穿透解决方案，商品信息查询，缓存空值
      *
      * @param id
      * @return
